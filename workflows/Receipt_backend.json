@@ -1,0 +1,368 @@
+{
+  "name": "Receipt_backend",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "hour": 1
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1jHa7pXkAPqLuGeW8_FMF9mr-AhL3s5Va",
+          "mode": "list",
+          "cachedResultName": "receipts",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1jHa7pXkAPqLuGeW8_FMF9mr-AhL3s5Va"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "bf801210-b455-4a7c-8867-8fddcad68619",
+      "name": "Google Drive Trigger",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "MuPYm2xv3ewTFePC",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "3292defe-3ee0-47a6-8e08-cd330e458372",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "MuPYm2xv3ewTFePC",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mistralAi",
+      "typeVersion": 1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "7f7b3eaf-1e0b-444c-9040-5d72884a9714",
+      "name": "Extract text",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "ja1qMJH74qWBIWK1",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyse this receipt:  {{ $json.extractedText }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a helpful assistant who is excellent at helping me extract information from receipts all in English regardless of the language they are in. Note: if any numerical value is read as NA or na consider that numerical value to be 0"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        624,
+        0
+      ],
+      "id": "a3223086-59d4-42d7-b8c8-9c4a713a317a",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "deepseek-v4-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "typeVersion": 1,
+      "position": [
+        544,
+        192
+      ],
+      "id": "9d19eb82-3e28-42da-8ce3-21b83b66d18f",
+      "name": "DeepSeek Chat Model",
+      "credentials": {
+        "deepSeekApi": {
+          "id": "Tfr8f3CvNR0qnybw",
+          "name": "DeepSeek account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\t\"date\": \"03.09.2006\",\n  \"currency\": \"EUR\",\n  \"place\": \"Berlin, Germany\",\n  \"vendor\": \"Edeka\",\n  \"description\": \"potatoes,razor, moisturing lotion, potato chips\",\n  \"category\": \"Groceries, Entertainment,Cleaning supplies, Stationary\",\n  \"paymentMethod\": \"Cash\",\n  \"totalItems\": \"10\",\n  \"totalAmount\": \"39.50\",\n  \"totalTax\": \"4.79\",\n\t\"linktoGoogleDrive\": \"https://drive.google.com/file/d/1YSzpycdQMGSWS9ZM4Cg3FDSenSZV6Xra/view\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        800,
+        208
+      ],
+      "id": "faeba561-c21b-45af-8d13-6d7ddd5405db",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "VdT2ddpji5ePxqDB",
+          "mode": "list",
+          "cachedResultName": "receipts",
+          "cachedResultUrl": "/projects/JGg9QuAVCdxqEBK7/datatables/VdT2ddpji5ePxqDB"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $json.output.date }}",
+            "currency": "={{ $json.output.currency }}",
+            "place": "={{ $json.output.place }}",
+            "vendor": "={{ $json.output.vendor }}",
+            "description": "={{ $json.output.description }}",
+            "paymentMethod": "={{ $json.output.paymentMethod }}",
+            "category": "={{ $json.output.category }}",
+            "totalItems": "={{ $json.output.totalItems }}",
+            "totalAmount": "={{ $json.output.totalAmount }}",
+            "taxAmount": "={{ $json.output.totalTax }}",
+            "linktoGoogleDrive": "={{ $('Download file').item.json.webContentLink }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "currency",
+              "displayName": "currency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "place",
+              "displayName": "place",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "vendor",
+              "displayName": "vendor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "paymentMethod",
+              "displayName": "paymentMethod",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "totalItems",
+              "displayName": "totalItems",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "totalAmount",
+              "displayName": "totalAmount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "taxAmount",
+              "displayName": "taxAmount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "linktoGoogleDrive",
+              "displayName": "linktoGoogleDrive",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        976,
+        0
+      ],
+      "id": "9a849378-01ef-4e5c-a38d-eb5f27550d61",
+      "name": "Insert row"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Extract text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract text": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Insert row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "c761b55d-83af-4a8f-933c-1bcf8bbb3e07",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "831c57a3f36f22bb664c1fe953464fa7ae074465b584a42a4d88844a18fa111d"
+  },
+  "nodeGroups": [],
+  "id": "dkVtOEF0AYuNH4U9",
+  "tags": []
+}
